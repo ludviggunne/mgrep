@@ -10,10 +10,10 @@
 Prints lines from `<files>` containing any of the `<terms>`.
 If no files are specified, `stdout` is used instead.
 
-## Options (not yet implemented!)
+## Options
 - `-c`: Case insensitive search
-- `-a`: Line must contain all words
-- `-m`: Enable multi-threading
+- `-a`: Line must contain all words (not implemented)
+- `-m`: Enable multi-threading      (not implemented)
 
 ## Looks like this:
 ![](screenshot.png)

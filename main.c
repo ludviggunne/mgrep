@@ -71,7 +71,6 @@ typedef struct {
 
     // path == NULL -> use stdout
     const char        *path;
-    config_t          *config;
     buffer_t           result;
     enum search_status status;
 } thread_data_t;
@@ -93,7 +92,6 @@ int main(int argc, const char *argv[]) {
 
         thread_data_t data;
         data.status = OK;
-        data.config = &config;
         if (!buffer_init(&data.result, 100)) {
 
             ERREXIT("ERROR: Unable to create buffer\n");
@@ -245,17 +243,17 @@ void *search_file(thread_data_t *data)
         size_t offset = 0;
         for (size_t col = 0; col < line_len; col++) {
             
-            for (size_t term_id = 0; term_id < data->config->nterms; term_id++) {
+            for (size_t term_id = 0; term_id < config.nterms; term_id++) {
             
-                const char *term = data->config->terms[term_id];
+                const char *term = config.terms[term_id];
 
                 if (term_match(line, term, col)) {
 
                     CHECK(buffer_append_range(&data->result, &line[offset], &line[col]));
                     CHECK(buffer_append(&data->result, COLORS[term_id % NCOLORS]));
-                    CHECK(buffer_append_range(&data->result, &line[col], &line[col + data->config->term_lens[term_id]]));
+                    CHECK(buffer_append_range(&data->result, &line[col], &line[col + config.term_lens[term_id]]));
                     CHECK(buffer_append(&data->result, RESET));
-                    col += data->config->term_lens[term_id];
+                    col += config.term_lens[term_id];
                     offset = col;
                 }
             }
@@ -264,7 +262,7 @@ void *search_file(thread_data_t *data)
 
         if (offset > 0) {
 
-            buffer_append(&data->result, &line[offset]);
+            CHECK(buffer_append(&data->result, &line[offset]));
         }
     }
 
@@ -387,7 +385,17 @@ int term_match(const char *line, const char *term, size_t offset)
 
     while (*term != '\0' && *line != '\0') {
 
-        if (*line != *term) {
+        char l = *line;
+        char t = *term;
+
+        // To lowercase if case insensitive
+        if (config.options[CASE_INSENSITIVE]) {
+
+            if ('A' <= l && l <= 'Z') l += 'a' - 'A';
+            if ('A' <= t && t <= 'Z') t += 'a' - 'A';
+        }
+
+        if (l != t) {
 
             return 0;
         }
