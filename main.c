@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
+#include <strings.h>
 
 #define MAX_THREADS 4
 #define MAX_FILES   64
@@ -76,10 +76,6 @@ typedef struct {
 } thread_data_t;
 
 void *search_file(thread_data_t *data);
-int term_match(const char *line, const char *term, size_t offset);
-pthread_t thread_pool[MAX_THREADS];
-
-
 
 int main(int argc, const char *argv[]) {
 
@@ -245,13 +241,17 @@ void *search_file(thread_data_t *data)
             
             for (size_t term_id = 0; term_id < config.nterms; term_id++) {
             
-                const char *term = config.terms[term_id];
+                const char  *term = config.terms[term_id];
+                const size_t term_len = config.term_lens[term_id];
 
-                if (term_match(line, term, col)) {
+                if ((config.options[CASE_INSENSITIVE] ? 
+                    strncasecmp(&line[col], term, term_len) :
+                    strncmp(&line[col], term, term_len)) == 0)    
+                {
 
                     CHECK(buffer_append_range(&data->result, &line[offset], &line[col]));
                     CHECK(buffer_append(&data->result, COLORS[term_id % NCOLORS]));
-                    CHECK(buffer_append_range(&data->result, &line[col], &line[col + config.term_lens[term_id]]));
+                    CHECK(buffer_append_range(&data->result, &line[col], &line[col + term_len]));
                     CHECK(buffer_append(&data->result, RESET));
                     col += config.term_lens[term_id];
                     offset = col;
@@ -376,33 +376,4 @@ int  buffer_null_terminate(buffer_t *buf)
 
     char nl[] = { '\0', '\0' };
     return buffer_append_range(buf, &nl[0], &nl[1]);
-}
-
-int term_match(const char *line, const char *term, size_t offset)
-{
-
-    line = &line[offset];
-
-    while (*term != '\0' && *line != '\0') {
-
-        char l = *line;
-        char t = *term;
-
-        // To lowercase if case insensitive
-        if (config.options[CASE_INSENSITIVE]) {
-
-            if ('A' <= l && l <= 'Z') l += 'a' - 'A';
-            if ('A' <= t && t <= 'Z') t += 'a' - 'A';
-        }
-
-        if (l != t) {
-
-            return 0;
-        }
-
-        line++;
-        term++;
-    }
-
-    return 1;
 }
