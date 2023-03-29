@@ -14,6 +14,18 @@
 #define ESC(n) "\033[" #n "m"
 #define RESET ESC(0)
 
+#define USAGE \
+"Usage:\n"\
+"    %s -f <file>... -t <term>... [options]\n"\
+"        file            file(s) to be searched (stdout used if no path is specified)\n"\
+"        term            terms(s) to be queried\n"\
+"    A maximum of %d files and %d terms may be specified.\n"\
+"    Options:\n"\
+"        -c              Case insensitive search\n"\
+"        -a              Line must contain all specified terms (not implemented)\n"\
+"        -m              Enable multithreading (not implemented)\n"
+#define USAGE_PARAMS config.prgm_name, MAX_FILES, MAX_TERMS
+
 const char *COLORS[] = {
 
     ESC(91),
@@ -33,6 +45,8 @@ enum options {
     OPTION_COUNT
 };
 typedef struct {
+
+    const char *prgm_name;
 
     const char *paths[MAX_FILES];
     size_t      npaths;
@@ -101,19 +115,21 @@ int main(int argc, const char *argv[]) {
 
             search_file(&data);
 
+            const char *fname = data.path ? data.path : "stdout";
+
             if (data.status == FILE_ERR) {
                 
-                printf("ERROR: Could not open/read file %s\n", data.path);
+                printf("ERROR: Could not open/read file %s\n", fname);
             }
 
             if (data.status == MEM_ERR) {
 
-                printf("ERROR: Out of memory while reading file %s\n", data.path);
+                printf("ERROR: Out of memory while reading file %s\n", fname);
             }
 
-            if (data.result.length > 0) {
+            if (data.result.length > 1) {
 
-                printf("Results from file %s:\n%s\n", data.path, data.result.data);                
+                printf("Results from file %s:\n%s\n", fname, data.result.data);                
             }            
         }
 
@@ -129,7 +145,9 @@ void parse_args(int argc, const char *argv[])
     enum parse_state_t parse_state = S_NONE;
     
     memset(&config, 0, sizeof(config));
-    
+
+    config.prgm_name = argv[0];
+
     for (int argi = 1; argi < argc; argi++)
     {
 
@@ -139,7 +157,7 @@ void parse_args(int argc, const char *argv[])
 
             if (strlen(arg) != 2) {
 
-                ERREXIT("ERROR: Invalid option: \"%s\"\n", arg);
+                ERREXIT("ERROR: Invalid option: \"%s\"\n" USAGE, arg, USAGE_PARAMS);
             }
 
             switch (arg[1]) {
@@ -165,7 +183,7 @@ void parse_args(int argc, const char *argv[])
                     break;
 
                 default:
-                    ERREXIT("ERROR: Invalid option: \"%s\"\n", arg);
+                    ERREXIT("ERROR: Invalid option: \"%s\"\n" USAGE, arg, USAGE_PARAMS);
             }
         } else {
 
@@ -191,7 +209,7 @@ void parse_args(int argc, const char *argv[])
                     break;
 
                 case S_NONE:
-                    ERREXIT("ERROR: Unexpected token: \"%s\". Use -f or -t to specify files/terms\n", arg);
+                    ERREXIT("ERROR: Unexpected token: \"%s\". Use -f or -t to specify files/terms\n" USAGE, arg, USAGE_PARAMS);
             }
         }
     }
@@ -205,7 +223,7 @@ void parse_args(int argc, const char *argv[])
 
     if (config.nterms == 0) {
 
-        ERREXIT("ERROR: No terms specified\n");
+        ERREXIT("ERROR: No terms specified\n" USAGE, USAGE_PARAMS);
     }
 }
 
@@ -275,11 +293,6 @@ void *search_file(thread_data_t *data)
         fclose(file);
 
     return NULL;
-}
-
-void usage() {
-
-    printf("Usage:\n    mgrep -f <file> <...> -t <term> <...> [options]\n");
 }
 
 int buffer_init(buffer_t *buf, size_t capacity)
