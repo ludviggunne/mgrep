@@ -8,7 +8,7 @@
 ```
 
 Prints lines from `<files>` containing any of the `<terms>`.
-If no files are specified, `stdout` is used instead.
+If no files are specified, `stdin` is used instead.
 
 ## Options
 - `-c`: Case insensitive search
