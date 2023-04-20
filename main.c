@@ -22,6 +22,7 @@
 "    A maximum of %d files and %d terms may be specified.\n"\
 "    Options:\n"\
 "        -c              Case insensitive search\n"\
+"        -p              Print out which file and line term was found\n"\
 "        -a              Line must contain all specified terms (not implemented)\n"\
 "        -m              Enable multithreading (not implemented)\n"
 #define USAGE_PARAMS config.prgm_name, MAX_FILES, MAX_TERMS
@@ -42,6 +43,7 @@ enum options {
     CASE_INSENSITIVE,
     MATCH_ALL,
     USE_THREADS,
+    PRINT_INFO,
     OPTION_COUNT
 };
 typedef struct {
@@ -173,13 +175,17 @@ void parse_args(int argc, const char *argv[])
                 case 'c':
                     config.options[CASE_INSENSITIVE] = 1;
                     break;
-                
+
                 case 'a':
                     config.options[MATCH_ALL] = 1;
                     break;
                 
                 case 'm':
                     config.options[USE_THREADS] = 1;
+                    break;
+
+                case 'p':
+                    config.options[PRINT_INFO] = 1;
                     break;
 
                 default:
@@ -250,9 +256,11 @@ void *search_file(thread_data_t *data)
     char   *line = NULL;
     size_t  buf_sz = 0;
     long    line_len;
+    long    line_num = 0;
 
     while ((line_len = getline(&line, &buf_sz, file)) != -1) {
 
+        line_num++;
 
         size_t offset = 0;
         for (size_t col = 0; col < line_len; col++) {
@@ -266,7 +274,18 @@ void *search_file(thread_data_t *data)
                     strncasecmp(&line[col], term, term_len) :
                     strncmp(&line[col], term, term_len)) == 0)    
                 {
+                    
+                    if (offset == 0) {
 
+                        CHECK(buffer_append(&data->result, "    "));
+                        if (config.options[PRINT_INFO]) {
+
+                            CHECK(buffer_append(&data->result, data->path ? data->path : "stdout"));
+                            char lnbuf[32];
+                            snprintf(lnbuf, sizeof(lnbuf), " (%ld): ", line_num);
+                            CHECK(buffer_append(&data->result, lnbuf));
+                        }
+                    }
                     CHECK(buffer_append_range(&data->result, &line[offset], &line[col]));
                     CHECK(buffer_append(&data->result, COLORS[term_id % NCOLORS]));
                     CHECK(buffer_append_range(&data->result, &line[col], &line[col + term_len]));
@@ -317,7 +336,7 @@ int  buffer_append(buffer_t *buf, const char *data)
 
         if (buf->length == buf->capacity) {
 
-            if (!buffer_realloc(buf, 2 * buf->capacity)) {
+            if (!buffer_realloc(buf, 4 * buf->capacity)) {
 
                 return 0;
             }
@@ -367,7 +386,7 @@ void buffer_free(buffer_t *buf)
     buf->data = NULL;
 }
 
-int  buffer_realloc(buffer_t *buf, size_t capacity)
+int buffer_realloc(buffer_t *buf, size_t capacity)
 {
 
     char *new_data = malloc(capacity);
@@ -384,7 +403,7 @@ int  buffer_realloc(buffer_t *buf, size_t capacity)
     return 1;
 }
 
-int  buffer_null_terminate(buffer_t *buf)
+int buffer_null_terminate(buffer_t *buf)
 {
 
     char nl[] = { '\0', '\0' };

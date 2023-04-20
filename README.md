@@ -12,6 +12,7 @@ If no files are specified, `stdout` is used instead.
 
 ## Options
 - `-c`: Case insensitive search
+- `-p`: Print file and line number
 - `-a`: Line must contain all words (not implemented)
 - `-m`: Enable multi-threading      (not implemented)
 
