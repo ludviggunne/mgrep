@@ -17,7 +17,7 @@
 #define USAGE \
 "Usage:\n"\
 "    %s -f <file>... -t <term>... [options]\n"\
-"        file            file(s) to be searched (stdout used if no path is specified)\n"\
+"        file            file(s) to be searched (stdin used if no path is specified)\n"\
 "        term            terms(s) to be queried\n"\
 "    A maximum of %d files and %d terms may be specified.\n"\
 "    Options:\n"\
@@ -308,7 +308,7 @@ void *search_file(thread_data_t *data)
     if (line)
         free(line);
 
-    if (file != stdout)
+    if (file != stdin)
         fclose(file);
 
     return NULL;
